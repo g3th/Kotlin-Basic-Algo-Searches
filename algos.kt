@@ -1,5 +1,4 @@
 import java.io.*
-import javax.sound.sampled.Line
 import kotlin.math.sqrt
 import kotlin.system.exitProcess
 import kotlin.system.measureTimeMillis
@@ -57,7 +56,7 @@ fun linearSearch(query: MutableList<String>, directory: MutableList<String>): Se
 
 data class BubbleSortReturnValues(val sortedDirectory: MutableList<String>, val formattedTime: Long, val error: Boolean)
 fun bubbleSort(directory: MutableList<String>, linearSearchTime: Long): BubbleSortReturnValues {
-
+    var percentage: Double
     var stoppedFlag = false
     var performance: Long = 0
     var counter = 0
@@ -65,7 +64,7 @@ fun bubbleSort(directory: MutableList<String>, linearSearchTime: Long): BubbleSo
     mainLoop@while (counter != directory.size) {
         for (i in directory.indices) {
             val currentTime = measureTimeMillis {
-                if (i + 1 < directory.size && phoneBookNameSize(directory[i]) > phoneBookNameSize(directory[i + 1])) {
+                if (i + 1 < directory.size && directory[i] > directory[i + 1]) {
                     swap = directory[i]
                     directory[i] = directory[i + 1]
                     directory[i + 1] = swap
@@ -77,15 +76,22 @@ fun bubbleSort(directory: MutableList<String>, linearSearchTime: Long): BubbleSo
                to complete, regardless of time taken.
                This is not recommended, as the integral directory
                (not small_directory.txt, but directory.txt) contains 1.000.000 entries
-               and sorting will take well over an hour.
+               and sorting will take too long.
              */
 
-            if (performance >= linearSearchTime * 2) {
+            if (performance >= linearSearchTime * 10) {
                 stoppedFlag = true
                 break@mainLoop
             }
         }
         counter += 1
+        
+    /* Display Completion Percentage
+        percentage = counter / directory.size.toDouble() * 100
+        if (percentage != 0.0 && percentage % 10 == 0.0) {
+           println("${percentage}%")
+     } */
+        
     }
 
     return BubbleSortReturnValues(directory, performance, stoppedFlag)
@@ -100,16 +106,16 @@ fun jumpSearch(query: MutableList<String>, directory: MutableList<String>): Sear
     val totalJumpSearchTime = measureTimeMillis {
         for (i in query.indices) {
             directorySearch@ while (i != query.size) {
-                if (phoneBookNameSize(directory[currentIndex]) <= queryNameSize(query[i])) {
+                if (directory[currentIndex] <= query[i]) {
                     previousIndex = currentIndex
                     if (currentIndex + blockSize.toInt() > directory.size - 1) {
                         currentIndex = directory.lastIndex
                     } else {
                         currentIndex += blockSize.toInt()
                     }
-                } else if (phoneBookNameSize(directory[currentIndex]) >= queryNameSize(query[i])) {
+                } else if (directory[currentIndex] >= query[i]) {
                     for (elem in currentIndex downTo previousIndex) {
-                        if (phoneBookNameSize(directory[elem]) == queryNameSize(query[i])) {
+                        if (directory[elem] == query[i]) {
                             //println("Match : ${phoneBookNameSize(directory[elem])} : ${queryNameSize(query[i])}")
                             hits += 1
                             previousIndex = 0
@@ -125,12 +131,12 @@ fun jumpSearch(query: MutableList<String>, directory: MutableList<String>): Sear
 }
 
 fun main() {
-
+    val userDir = System.getProperty("user.home") + "/Desktop/"
     var displayInfo = ""
     val directory = mutableListOf<String>()
     val query = mutableListOf<String>()
-    fetchFile("/home/roberto/Desktop/small_find.txt", query)
-    fetchFile("/home/roberto/Desktop/small_directory.txt", directory)
+    fetchFile("${userDir}queries", query)
+    fetchFile("${userDir}random_words", directory)
 
     println("\nStart searching (linear search)...")
 
@@ -145,9 +151,8 @@ fun main() {
     val bubbleSortTime = timeConversion(bTotalTime)
 
     /* Write Sorted List To File
-    File("sorted").writeText("")
     for (i in sortedList) {
-    File("sorted").appendText(i + "\n")
+    File("${userDir}sorted").appendText(i + "\n")
     } */
 
     if (stoppedFlag) {
