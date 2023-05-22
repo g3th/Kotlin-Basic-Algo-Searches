@@ -7,13 +7,45 @@ import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 
-fun fetchFile(dir: String, list: MutableList<String>): MutableList<String> {
-    File(dir).forEachLine {
-        list.add(it)
-    }
-    return list
-}
+private val parse = ParseEntries()
 
+class ParseEntries {
+    private val dir = System.getProperty("user.home")+"/Desktop/"
+
+    fun fetchFile(file: String, list: MutableList<String>): MutableList<String>{
+        File(dir + file).forEachLine{
+            list.add(it)
+        }
+        return list
+    }
+
+    fun phoneBookEntry(str: String): String {
+        if (str.split(" ").drop(2).isEmpty()) {
+            return str.split(" ").drop(1)[0]
+        }
+        return "${str.split(" ")[1]} ${str.split(" ").drop(1)[1]}"
+    }
+
+    fun phoneNumber(str: String): String {
+        return str.split(" ")[0]
+    }
+
+    fun phoneBookNameSize (str: String): String {
+        if (str.split(" ").drop(2).isEmpty()){
+            return str.split(" ").drop(1)[0]
+        }
+        return str.split(" ").drop(1)[1]
+    }
+
+    fun queryNameSize (str: String): String {
+        if (str.split(" ").size == 2) {
+            return str.split(" ").drop(1)[0]
+        } else {
+            return str.split(" ")[0]
+        }
+    }
+
+}
 fun timeConversion(time: Long): List<Long> {
     val result = mutableListOf<Double>()
     result.add(time / 60000.0 % 60.0)
@@ -22,20 +54,7 @@ fun timeConversion(time: Long): List<Long> {
     return result.map { it.toLong()}
 }
 
-fun phoneBookNameSize (str: String): String {
-    if (str.split(" ").drop(2).isEmpty()){
-        return str.split(" ").drop(1)[0]
-    }
-    return str.split(" ").drop(1)[1]
-}
 
-fun queryNameSize (str: String): String {
-    if (str.split(" ").size == 2) {
-        return str.split(" ").drop(1)[0]
-    } else {
-        return str.split(" ")[0]
-    }
-}
 data class QuickSortReturnValues(val directory: MutableList<String>, val time: Long)
 fun quickSort(directory: MutableList<String>, left: Int, right: Int): MutableList<String> {
     val index = partition (directory, left, right)
@@ -51,10 +70,10 @@ fun quickSort(directory: MutableList<String>, left: Int, right: Int): MutableLis
 fun partition(directory: MutableList<String>, l: Int, r: Int): Int {
     var left = l
     var right = r
-    val pivot = phoneBookNameSize(directory[(left + right)/2])
+    val pivot = parse.phoneBookNameSize(directory[(left + right)/2])
     while (left <= right) {
-        while (phoneBookNameSize(directory[left]) < pivot) left++
-        while (phoneBookNameSize(directory[right]) > pivot) right--
+        while (parse.phoneBookNameSize(directory[left]) < pivot) left++
+        while (parse.phoneBookNameSize(directory[right]) > pivot) right--
         if (left <= right) {
             swapArray(directory, left,right)
             left++
@@ -77,6 +96,9 @@ fun linearSearch(query: MutableList<String>, directory: MutableList<String>): Se
         for (i in query) {
             for ( j in directory) {
                 if (j.contains(i)) {
+                    if (hits == query.size){
+                        break
+                    }
                     hits += 1
                 }
             }
@@ -95,7 +117,8 @@ fun bubbleSort(directory: MutableList<String>, linearSearchTime: Long): BubbleSo
     mainLoop@while (counter != directory.size) {
         for (i in directory.indices) {
             val currentTime = measureTimeMillis {
-                if (i + 1 < directory.size && phoneBookNameSize(directory[i]) > phoneBookNameSize(directory[i + 1])) {
+                if (i + 1 < directory.size && parse.phoneBookNameSize(directory[i]) >
+                    parse.phoneBookNameSize(directory[i + 1])) {
                     swap = directory[i]
                     directory[i] = directory[i + 1]
                     directory[i + 1] = swap
@@ -136,16 +159,19 @@ fun jumpSearch(query: MutableList<String>, directory: MutableList<String>): Sear
     val totalJumpSearchTime = measureTimeMillis {
         for (i in query.indices) {
             directorySearch@ while (i != query.size) {
-                if (phoneBookNameSize(directory[currentIndex]) <= queryNameSize(query[i])) {
+                if (parse.phoneBookNameSize(directory[currentIndex]) <= parse.queryNameSize(query[i])) {
                     previousIndex = currentIndex
                     if (currentIndex + blockSize.toInt() > directory.size - 1) {
                         currentIndex = directory.lastIndex
                     } else {
                         currentIndex += blockSize.toInt()
                     }
-                } else if (phoneBookNameSize(directory[currentIndex]) >= queryNameSize(query[i])) {
+                } else if (parse.phoneBookNameSize(directory[currentIndex]) >= parse.queryNameSize(query[i])) {
                     for (elem in currentIndex downTo previousIndex) {
-                        if (phoneBookNameSize(directory[elem]) == queryNameSize(query[i])) {
+                        if (parse.phoneBookNameSize(directory[elem]) == parse.queryNameSize(query[i])) {
+                            if (hits == query.size){
+                                break
+                            }
                             //println("Match : ${phoneBookNameSize(directory[elem])} : ${queryNameSize(query[i])}")
                             hits += 1
                             previousIndex = 0
@@ -170,14 +196,14 @@ fun binarySearch(directory: MutableList<String>, query: String): Int {
     while(true) {
         mid = (low + high) / 2
         when {
-            phoneBookNameSize(directory[mid]) == queryNameSize(query) -> {
+            parse.phoneBookNameSize(directory[mid]) == parse.queryNameSize(query) -> {
                 hit++
                 break
             }
-            phoneBookNameSize(directory[mid]) > queryNameSize(query) -> {
+            parse.phoneBookNameSize(directory[mid]) > parse.queryNameSize(query) -> {
                 high = mid--
             }
-            phoneBookNameSize(directory[mid]) < queryNameSize(query) -> {
+            parse.phoneBookNameSize(directory[mid]) < parse.queryNameSize(query) -> {
                 low = mid++
             }
         }
@@ -185,16 +211,41 @@ fun binarySearch(directory: MutableList<String>, query: String): Int {
     return hit
 }
 
+class HashMap {
+
+    private val phoneBook = mutableMapOf<String,String>()
+    private var hits = 0
+
+    fun create(pdir: MutableList<String>) {
+        for (i in pdir) {
+            if (i.contains(" ")) {
+                phoneBook[parse.phoneBookEntry(i)] = parse.phoneNumber(i)
+            } else {
+                phoneBook["${parse.phoneBookEntry(i)} ${parse.phoneBookEntry(i)}"] = parse.phoneNumber(i)
+            }
+        }
+    }
+
+    fun search(query: String): Int {
+        for (j in phoneBook.keys) {
+            if (query == j) {
+                hits++
+            } else if (hits == 500){
+                break
+            }
+        }
+        return hits
+    }
+}
+
 @OptIn(ExperimentalTime::class)
 fun main() {
-    val userDir = System.getProperty("user.home") + "/Desktop/"
-    var displayInfo = ""
     val directory = mutableListOf<String>()
     val query = mutableListOf<String>()
-    fetchFile("${userDir}small_find.txt", query)
-    fetchFile("${userDir}small_directory.txt", directory)
+    parse.fetchFile("find.txt", query)
+    parse.fetchFile("directory.txt", directory)
 
-
+    // LINEAR SEARCH
     println("\nStart searching (linear search)...")
 
     val (lSearchTime, lHits) = linearSearch(query, directory)
@@ -202,6 +253,7 @@ fun main() {
     val linearSearchTime = timeConversion(lSearchTime)
     print(String.format("%1d min. %1d sec. %3d ms.", linearSearchTime[0], linearSearchTime[1], linearSearchTime[2]) )
 
+    // BUBBLE SORT + JUMP SEARCH
     println("\n\nStart searching (bubble sort + jump search)...")
 
     val (sortedList, bTotalTime, stoppedFlag) = bubbleSort(directory, lSearchTime)
@@ -234,6 +286,8 @@ fun main() {
         print(String.format("\nSorting Time: %1d min. %1d sec. %3d ms.", bubbleSortTime[0], bubbleSortTime[1], bubbleSortTime[2]))
         println(String.format("Searching time: %1d min. %1d sec. %3d ms.\n", jumpSearchTime[0], jumpSearchTime[1], jumpSearchTime[2]))
     }
+
+    // QUICK SORT + BINARY SEARCH
     println("\n\nStart searching (quick sort + binary search)...")
 
     val (values, duration) = measureTimedValue {
@@ -275,4 +329,39 @@ fun main() {
         totalSearchTime[1],
         totalSearchTime[2]))
 
+    // HASH MAP
+    println("\nStart searching (hash table)...")
+    val hMap = HashMap()
+    val (hMapSort, hSDuration) = measureTimedValue{
+        hMap.create(directory)
+    }
+    var totalHSearchTime: Duration? = null
+    var totalHSearchHits = 0
+    for (i in query) {
+        val (hMapFind, hFDuration) = measureTimedValue {
+            hMap.search(i)
+        }
+        totalHSearchHits++
+        totalHSearchTime = hFDuration
+    }
+
+    val totalHashDuration = listOf(totalHSearchTime?.plus(hSDuration)?.inWholeMinutes,
+        totalHSearchTime?.plus(hSDuration)?.inWholeSeconds,
+        totalHSearchTime?.plus(hSDuration)?.inWholeMilliseconds)
+
+    val parsedHsDuration = listOf(hSDuration.inWholeMinutes, hSDuration.inWholeSeconds, hSDuration.inWholeMilliseconds)
+    val parsedHfDuration = listOf(totalHSearchTime?.inWholeMinutes, totalHSearchTime?.inWholeSeconds,
+        totalHSearchTime?.inWholeMilliseconds)
+
+    print("Found $totalHSearchHits / ${query.size} entries. Time taken: ")
+    print(String.format("%1d min. %1d sec. %3d ms.",totalHashDuration[0],
+        totalHashDuration[1],
+        totalHashDuration[2]))
+
+    print(String.format("\nCreating Time: %1d min. %1d sec. %3d ms.",parsedHsDuration[0],
+        parsedHsDuration[1], parsedHsDuration[2]))
+
+    println(String.format("\nSearching time: %1d min. %1d sec. %3d ms.",parsedHfDuration[0],
+        parsedHfDuration[1],
+        parsedHfDuration[2]))
 }
